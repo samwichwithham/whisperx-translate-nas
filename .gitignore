@@ -1,0 +1,46 @@
+# --- OS / Editors ---
+.DS_Store
+.vscode/
+.idea/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+
+.pytest_cache/
+.mypy_cache/
+.cache/
+
+# --- Build / Outputs ---
+build/
+dist/
+logs/
+*.log
+
+# --- Project-specific (keep huge stuff out of git) ---
+/Models/
+/Transcriptions/
+/Reports/
+/old_scripts/
+outputs/
+checkpoints/
+datasets/
+data/
+how-to.txt
+
+# --- Media (track with Git LFS if needed) ---
+*.wav
+*.mp3
+*.flac
+*.aiff
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.srt
+*.vtt

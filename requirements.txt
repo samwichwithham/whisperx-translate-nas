@@ -1,0 +1,9 @@
+# Pull Torch wheels from the CPU index; everything else from PyPI
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch==2.7.0+cpu
+torchaudio==2.7.0+cpu
+
+tqdm
+requests
+whisperx[vad] @ git+https://github.com/m-bain/whisperX.git
