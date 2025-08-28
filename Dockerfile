@@ -24,8 +24,6 @@ VOLUME ["/models"]
 # default thread pool – change at runtime with  -e OMP_NUM_THREADS=
 ENV OMP_NUM_THREADS=8
 ENV TZ=UTC
-ENV TELEGRAM_BOT_TOKEN=
-ENV TELEGRAM_CHAT_ID=
 
 WORKDIR /app
 COPY whisperx_batch_transcriber.py /app/

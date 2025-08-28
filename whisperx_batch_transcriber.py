@@ -3,12 +3,12 @@
 Batch transcription & translation with WhisperX on a QNAP NAS (TBS‑h574TX).
 
 Key features
--------------
-* **Single‑load models** – tiny for language detect, large‑v3 for main pass.
-* **Intel® Extension for PyTorch (IPEX)** auto‑enabled when installed → ~1.3× faster.
+------------
+* **High‑quality transcription** – manual language selection, large‑v3 by default.
 * **Safe alignment** – skips languages without an align model.
-* **Configurable CLI** – override root, device, model, verbosity.
-* **Robust logging, Telegram alerts, graceful Ctrl‑C**.
+* **MPS backend** – supports Apple Silicon GPUs.
+* **Configurable CLI** – root, device, model, language, precision, decoding.
+* **Robust logging and graceful Ctrl‑C**.
 * **Thread control** – honours `OMP_NUM_THREADS`; sets Torch threads accordingly.
 """
 
@@ -23,20 +23,11 @@ from pathlib import Path
 from datetime import datetime
 import shutil
 import subprocess
-import tempfile
-from typing import List
+from typing import Any, List
 
-import requests
 from tqdm import tqdm
 import whisperx
 import torch  # for thread control
-
-# Try to load Intel® Extension for PyTorch if present
-try:
-    import intel_extension_for_pytorch as ipex  # type: ignore
-    _IPEX_AVAILABLE = True
-except ImportError:  # pragma: no cover
-    _IPEX_AVAILABLE = False
 
 # ------------------------------ Defaults -------------------------------------
 FOOTAGE_ROOT = Path('/data/footage/')
@@ -45,27 +36,6 @@ BACKUP_ROOT = Path('/data/Transcriptions/')
 DURATION_THRESHOLD_MIN = 1
 SUPPORTED_EXTENSIONS = {'.mp4', '.mov', '.mkv', '.avi', '.mxf', '.wav'}
 
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
-
-# -----------------------------------------------------------------------------
-
-def send_telegram(text: str) -> None:
-    """Send message via Telegram Bot API – no‑op if token/chat id missing."""
-    if not (TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID):
-        logging.debug('Telegram disabled')
-        return
-    try:
-        r = requests.post(
-            f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage',
-            data={'chat_id': TELEGRAM_CHAT_ID, 'text': text, 'parse_mode': 'HTML'},
-            timeout=10,
-        )
-        r.raise_for_status()
-    except Exception as exc:  # pragma: no cover – network problems not fatal
-        logging.warning('Telegram failed: %s', exc)
-
-# -----------------------------------------------------------------------------
 # FFprobe helpers
 # -----------------------------------------------------------------------------
 
@@ -152,12 +122,33 @@ def safe_load_align(lang: str, device: str):
 # -----------------------------------------------------------------------------
 
 class Transcriber:
-    def __init__(self, device: str, model_size: str = 'large-v3'):
-        logging.info('Loading WhisperX models (device=%s)…', device)
+    def __init__(
+        self,
+        device: str,
+        model_size: str = 'large-v3',
+        language: str = 'en',
+        precision: str = 'float32',
+        beam_size: int = 5,
+        best_of: int = 5,
+        temperature: float = 0.0,
+        chunk_size: int = 30,
+        condition_on_prev_text: bool = True,
+    ):
+        logging.info('Loading WhisperX model (device=%s, precision=%s)…', device, precision)
         self.device = device
-        self.model_fast = whisperx.load_model('tiny', device=device, compute_type='float32')
-        self.model_main = whisperx.load_model(model_size, device=device,
-                                              compute_type='float32', vad_method='pyannote')
+        self.language = language
+        self.beam_size = beam_size
+        self.best_of = best_of
+        self.temperature = temperature
+        self.chunk_size = chunk_size
+        self.condition_on_prev_text = condition_on_prev_text
+        self.align_cache: dict[str, tuple[Any, Any]] = {}
+        self.model_main = whisperx.load_model(
+            model_size,
+            device=device,
+            compute_type=precision,
+            vad_method='pyannote',
+        )
 
     # ------------------------- per‑file processing -------------------------
     def transcribe(self, path: Path) -> None:
@@ -178,12 +169,24 @@ class Transcriber:
                 logging.debug('Short clip – skip')
                 return
 
-        lang = self.model_fast.transcribe(str(path))['language']
-        logging.info('Language: %s', lang)
+        lang = self.language
+        logging.info('Language preset: %s', lang)
 
-        res = self.model_main.transcribe(str(path), language=lang, task='translate', chunk_size=10)
+        with torch.inference_mode():
+            res = self.model_main.transcribe(
+                str(path),
+                language=lang,
+                task='translate',
+                beam_size=self.beam_size,
+                best_of=self.best_of,
+                temperature=self.temperature,
+                chunk_size=self.chunk_size,
+                condition_on_prev_text=self.condition_on_prev_text,
+            )
 
-        model_align, meta = safe_load_align(lang, self.device)
+        if lang not in self.align_cache:
+            self.align_cache[lang] = safe_load_align(lang, self.device)
+        model_align, meta = self.align_cache[lang]
         segments = res['segments']
         if model_align:
             segments = whisperx.align(segments, model_align, meta, str(path),
@@ -243,8 +246,24 @@ def _sigint_handler(sig, frame):  # pragma: no cover
 def main() -> None:
     parser = argparse.ArgumentParser(description='Batch WhisperX transcriber for QNAP')
     parser.add_argument('--root', type=Path, default=FOOTAGE_ROOT, help='Footage root folder')
-    parser.add_argument('--device', choices=['cpu', 'cuda'], default='cpu')
+    default_device = (
+        'cuda'
+        if torch.cuda.is_available()
+        else 'mps'
+        if getattr(torch.backends, 'mps', None) and torch.backends.mps.is_available()
+        else 'cpu'
+    )
+    parser.add_argument('--device', choices=['cpu', 'cuda', 'mps'], default=default_device)
     parser.add_argument('--model', default='large-v3', help='Whisper model size')
+    parser.add_argument('--language', required=True, help='Language code (e.g. en, fr)')
+    parser.add_argument('--precision', choices=['float32', 'float16', 'bfloat16'], help='Model compute precision')
+    parser.add_argument('--beam-size', type=int, default=5, help='Decoding beam size')
+    parser.add_argument('--best-of', type=int, default=5, help='Number of candidates explored')
+    parser.add_argument('--temperature', type=float, default=0.0, help='Sampling temperature')
+    parser.add_argument('--chunk-size', type=int, default=30, help='Audio chunk size in seconds')
+    parser.add_argument('--no-condition-on-prev-text', dest='condition_on_prev_text', action='store_false',
+                        help='Disable conditioning on previous text')
+    parser.set_defaults(condition_on_prev_text=True)
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
@@ -258,10 +277,20 @@ def main() -> None:
 
     signal.signal(signal.SIGINT, _sigint_handler)
 
-    send_telegram('WhisperX job started.')
     start = datetime.now()
 
-    transcriber = Transcriber(device=args.device, model_size=args.model)
+    precision = args.precision or ('float16' if args.device in ('cuda', 'mps') else 'float32')
+    transcriber = Transcriber(
+        device=args.device,
+        model_size=args.model,
+        language=args.language,
+        precision=precision,
+        beam_size=args.beam_size,
+        best_of=args.best_of,
+        temperature=args.temperature,
+        chunk_size=args.chunk_size,
+        condition_on_prev_text=args.condition_on_prev_text,
+    )
     files = list_files(args.root)
 
     for p in tqdm(files, desc='Transcribing', unit='file'):
@@ -272,7 +301,6 @@ def main() -> None:
 
     end = datetime.now()
     write_report(files, start, end)
-    send_telegram(f'WhisperX job finished.\nStart: {start}\nEnd: {end}')
 
 
 if __name__ == '__main__':
