@@ -2,12 +2,11 @@
 name = "whisperx-translate-nas"
 version = "0.1.0"
 description = "Batch transcription & translation tool powered by WhisperX."
-requires-python = ">=3.10"
+requires-python = ">=3.10, <3.13"
 dependencies = [
+    "tqdm",
     "torch==2.7.0",
     "torchaudio==2.7.0",
-    "tqdm",
     "whisperx[vad] @ git+https://github.com/m-bain/whisperX.git",
 ]
 
-[tool.pdm]
