@@ -4,7 +4,6 @@ Batch transcription & translation tool powered by WhisperX.
 
 Optimised for Apple Silicon (MPS) but works on CPU and CUDA as well.
 
-<<<<<<< HEAD
 ## Setup (PDM)
 
 1. Install [PDM](https://pdm.fming.dev):
