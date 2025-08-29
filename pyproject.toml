@@ -7,6 +7,6 @@ dependencies = [
     "tqdm",
     "torch==2.7.0",
     "torchaudio==2.7.0",
-    "whisperx[vad] @ git+https://github.com/m-bain/whisperX.git",
+    "whisperx[vad]==3.4.2",
 ]
 

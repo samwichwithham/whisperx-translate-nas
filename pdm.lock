@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:d66d2391294cdd0c9fb47766361eb111a7f793b3cc23cdbe0b3df8cc8c969252"
+content_hash = "sha256:b1714bf3a82bcd224a37027b7c6c178dc6dcb4d5d82b1fc57370afb265d889e8"
 
 [[metadata.targets]]
 requires_python = ">=3.10,<3.13"
@@ -2623,9 +2623,7 @@ files = [
 [[package]]
 name = "whisperx"
 version = "3.4.2"
-requires_python = ">=3.9, <3.13"
-git = "https://github.com/m-bain/whisperX.git"
-revision = "2d9ce44329ae73af2520196d31cd14b6192ace44"
+requires_python = "<3.13,>=3.9"
 summary = "Time-Accurate Automatic Speech Recognition using Whisper."
 groups = ["default"]
 dependencies = [
@@ -2640,18 +2638,24 @@ dependencies = [
     "torchaudio>=2.5.1",
     "transformers>=4.48.0",
 ]
+files = [
+    {file = "whisperx-3.4.2-py3-none-any.whl", hash = "sha256:c78cee354f45da7cd93dab98e9db5c5a2d28843a69074b8d8c7fbb2fb2a1e1a7"},
+    {file = "whisperx-3.4.2.tar.gz", hash = "sha256:5f07ec56b129ec5da3600459a645b6676c711e2e4f58f3e094617cabcc032a9b"},
+]
 
 [[package]]
 name = "whisperx"
 version = "3.4.2"
 extras = ["vad"]
-requires_python = ">=3.9, <3.13"
-git = "https://github.com/m-bain/whisperX.git"
-revision = "2d9ce44329ae73af2520196d31cd14b6192ace44"
+requires_python = "<3.13,>=3.9"
 summary = "Time-Accurate Automatic Speech Recognition using Whisper."
 groups = ["default"]
 dependencies = [
-    "whisperx @ git+https://github.com/m-bain/whisperX.git",
+    "whisperx==3.4.2",
+]
+files = [
+    {file = "whisperx-3.4.2-py3-none-any.whl", hash = "sha256:c78cee354f45da7cd93dab98e9db5c5a2d28843a69074b8d8c7fbb2fb2a1e1a7"},
+    {file = "whisperx-3.4.2.tar.gz", hash = "sha256:5f07ec56b129ec5da3600459a645b6676c711e2e4f58f3e094617cabcc032a9b"},
 ]
 
 [[package]]
