@@ -130,15 +130,22 @@ class Transcriber:
         precision: str = 'float32',
         beam_size: int = 5,
         best_of: int = 5,
+<<<<<<< HEAD
         #temperature: float = 0.0,
         chunk_size: int = 30,
         #condition_on_prev_text: bool = True,
+=======
+        temperature: float = 0.0,
+        chunk_size: int = 30,
+        condition_on_prev_text: bool = True,
+>>>>>>> main
     ):
         logging.info('Loading WhisperX model (device=%s, precision=%s)…', device, precision)
         self.device = device
         self.language = language
         self.beam_size = beam_size
         self.best_of = best_of
+<<<<<<< HEAD
         #self.temperature = temperature
         self.chunk_size = chunk_size
         #self.condition_on_prev_text = condition_on_prev_text
@@ -150,12 +157,21 @@ class Transcriber:
             #"condition_on_prev_text": self.condition_on_prev_text,
         }
 
+=======
+        self.temperature = temperature
+        self.chunk_size = chunk_size
+        self.condition_on_prev_text = condition_on_prev_text
+        self.align_cache: dict[str, tuple[Any, Any]] = {}
+>>>>>>> main
         self.model_main = whisperx.load_model(
             model_size,
             device=device,
             compute_type=precision,
             vad_method='pyannote',
+<<<<<<< HEAD
             asr_options=asr_options,
+=======
+>>>>>>> main
         )
 
     # ------------------------- per‑file processing -------------------------
@@ -185,7 +201,15 @@ class Transcriber:
                 str(path),
                 language=lang,
                 task='translate',
+<<<<<<< HEAD
                 chunk_size=self.chunk_size,
+=======
+                beam_size=self.beam_size,
+                best_of=self.best_of,
+                temperature=self.temperature,
+                chunk_size=self.chunk_size,
+                condition_on_prev_text=self.condition_on_prev_text,
+>>>>>>> main
             )
 
         if lang not in self.align_cache:
@@ -251,15 +275,24 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Batch WhisperX transcriber for QNAP')
     parser.add_argument('--root', type=Path, default=FOOTAGE_ROOT, help='Footage root folder')
     default_device = (
+<<<<<<< HEAD
         'cpu'
         if torch.cuda.is_available()
         else 'mps'
         if getattr(torch.backends, 'mps', None) and torch.backends.mps.is_available()
         else 'cuda'
+=======
+        'cuda'
+        if torch.cuda.is_available()
+        else 'mps'
+        if getattr(torch.backends, 'mps', None) and torch.backends.mps.is_available()
+        else 'cpu'
+>>>>>>> main
     )
     parser.add_argument('--device', choices=['cpu', 'cuda', 'mps'], default=default_device)
     parser.add_argument('--model', default='large-v3', help='Whisper model size')
     parser.add_argument('--language', required=True, help='Language code (e.g. en, fr)')
+<<<<<<< HEAD
     parser.add_argument('--precision', choices=['float32', 'float16', 'bfloat16', 'int8'], help='Model compute precision')
     parser.add_argument('--beam-size', type=int, default=5, help='Decoding beam size')
     parser.add_argument('--best-of', type=int, default=5, help='Number of candidates explored')
@@ -268,6 +301,16 @@ def main() -> None:
     #parser.add_argument('--no-condition-on-prev-text', dest='condition_on_prev_text', action='store_false',
     #                    help='Disable conditioning on previous text')
     #parser.set_defaults(condition_on_prev_text=True)
+=======
+    parser.add_argument('--precision', choices=['float32', 'float16', 'bfloat16'], help='Model compute precision')
+    parser.add_argument('--beam-size', type=int, default=5, help='Decoding beam size')
+    parser.add_argument('--best-of', type=int, default=5, help='Number of candidates explored')
+    parser.add_argument('--temperature', type=float, default=0.0, help='Sampling temperature')
+    parser.add_argument('--chunk-size', type=int, default=30, help='Audio chunk size in seconds')
+    parser.add_argument('--no-condition-on-prev-text', dest='condition_on_prev_text', action='store_false',
+                        help='Disable conditioning on previous text')
+    parser.set_defaults(condition_on_prev_text=True)
+>>>>>>> main
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
@@ -291,9 +334,15 @@ def main() -> None:
         precision=precision,
         beam_size=args.beam_size,
         best_of=args.best_of,
+<<<<<<< HEAD
         #temperature=args.temperature,
         chunk_size=args.chunk_size,
         #condition_on_prev_text=args.condition_on_prev_text,
+=======
+        temperature=args.temperature,
+        chunk_size=args.chunk_size,
+        condition_on_prev_text=args.condition_on_prev_text,
+>>>>>>> main
     )
     files = list_files(args.root)
 

@@ -4,6 +4,7 @@ Batch transcription & translation tool powered by WhisperX.
 
 Optimised for Apple Silicon (MPS) but works on CPU and CUDA as well.
 
+<<<<<<< HEAD
 ## Setup (PDM)
 
 1. Install [PDM](https://pdm.fming.dev):
@@ -15,12 +16,18 @@ Optimised for Apple Silicon (MPS) but works on CPU and CUDA as well.
    pdm install
    ```
 
+=======
+>>>>>>> main
 ## Usage
 
 Provide the language manually and pick the desired model:
 
 ```bash
+<<<<<<< HEAD
 pdm run python whisperx_batch_transcriber.py \
+=======
+python whisperx_batch_transcriber.py \
+>>>>>>> main
     --device mps \
     --model large-v3 \
     --language en \
